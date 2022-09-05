@@ -1,0 +1,14 @@
+node_modules
+.env
+coverage
+coverage.json
+cache
+artifacts
+.secrets.ts
+.secrets.json
+../
+*/**/.DS_Store
+*.log*
+yarn.lock
+typechain
+builds
