@@ -52,6 +52,7 @@ library ProposalLibrary {
     }
 
     function isActive(Proposal storage proposal) internal view returns (bool) {
+        // @audit HIGH: add !proposal.isExpired (expired proposals will never be deleted) + !proposal.isVetoed (vetoed proposals will never be deleted)
         return proposal.createdBlockNumber > 0 && !isRejected(proposal) && !proposal.isExecuted;
     }
 
