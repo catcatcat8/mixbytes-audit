@@ -41,7 +41,7 @@ destination.call{value: amount}("");
 ```
 The attacker is able to specify a non-contract address as the destination address when creating a proposal for withdrawing ETH. Howewer, the attacker is able to deploy contract with the exact address through CREATE/CREATE2 pattern. If such a proposal is accepted and the attacker's contract has a fallback payable function which calls `execute` function again, the attacker will be able to steal all ETH from the contract.
 ##### Recomendation
-It's reccommended to place the `proposal.isExecuted` setting before the `if` statement. Also, if in this case `call` is not needed in that case, it can be changed to `transfer`.
+It's reccommended to place the `proposal.isExecuted` setting before the `if` statement. Also, if `call` is not needed in that case, it can be changed to `transfer`.
 
 #### 2. ERC-20 poisoned token
 * Contract: `VotingDAOV2.sol`
