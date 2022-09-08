@@ -57,6 +57,7 @@
   },
   "dependencies": {
     "@openzeppelin/contracts": "^4.4.2",
+    "@openzeppelin/contracts-upgradeable": "^4.7.3",
     "@tenderly/hardhat-tenderly": "^1.1.5",
     "ganache-cli": "^6.12.2",
     "hardhat-contract-sizer": "^2.6.1",

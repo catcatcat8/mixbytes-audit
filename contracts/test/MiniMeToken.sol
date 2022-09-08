@@ -1,3 +1,3 @@
-pragma solidity ^0.4.18;
+// pragma solidity ^0.4.18;
 
-import "minimetoken/contracts/MiniMeToken.sol";
+// import "minimetoken/contracts/MiniMeToken.sol";

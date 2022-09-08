@@ -15,7 +15,7 @@ contract ProposalQueue {
 
     Proposal[MAX_ACTIVE_PROPOSALS] public proposals;
 
-    function countYeas(uint256 hash) external view returns (uint32) {
+    function countYeas(uint256 hash) external view returns (uint32) {  // @audit-issue low: never used
         (bool found, uint8 index) = find(hash);
 
         if (!found) return 0;

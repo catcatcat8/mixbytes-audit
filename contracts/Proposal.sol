@@ -17,7 +17,7 @@ struct Proposal {
     uint32 createdBlockNumber;
     Payment payment;
     // init zeros:
-    uint32 updatedBlockNumber;
+    uint32 updatedBlockNumber; // @audit-issue low: never used, only useless updating
     uint32 yeas;
     uint32 nays;
     bool isExecuted;

@@ -6,7 +6,7 @@ import "contracts/Proposal.sol";
 import "contracts/Constants.sol";
 import "contracts/ProposalQueue.sol";
 import "contracts/Errors.sol";
-import "interfaces/IMiniMeToken.sol";
+import "./IMiniMeToken.sol";
 
 import "./VetoNFT.sol";
 import "./AccessControlled.sol";
@@ -47,7 +47,7 @@ contract VotingDAOV2 is AccessControlled, Initializable, ProposalQueue {
         require(token.decimals() == Constants.DECIMALS, "Unexpected number of decimals");
         votingToken = token;
         vetoes = vetoes_;
-        accessControl = accessControl_;
+        accessControl = accessControl_; // @note never used???
     }
 
     // allow to send ETH
@@ -126,7 +126,7 @@ contract VotingDAOV2 is AccessControlled, Initializable, ProposalQueue {
         (bool found, uint8 index) = find(hash);
         require(found, Errors.ERROR_NOT_FOUND);
 
-        Proposal storage proposal = proposals[index]; // @remind check gas optimisation with caching, may be low
+        Proposal storage proposal = proposals[index]; // @remind check gas optimisation with caching
         require(!proposal.vetoed, Errors.ERROR_VETOED);
         require(!proposal.isExpired(), Errors.ERROR_EXPIRED);
         require(!proposal.isExecuted, Errors.ERROR_ALREADY_EXECUTED);
@@ -146,7 +146,7 @@ contract VotingDAOV2 is AccessControlled, Initializable, ProposalQueue {
         voted[msg.sender][hash] = support ? VoteType.YEA : VoteType.NAY; // @remind test it
 
         if (proposal.isQuorumReached()) {
-            emit ProposalQuorumReached(proposal.hash, proposal.isSupported());
+            emit ProposalQuorumReached(proposal.hash, proposal.isSupported()); // @note can emit many times
         }
     }
 
@@ -162,7 +162,7 @@ contract VotingDAOV2 is AccessControlled, Initializable, ProposalQueue {
         require(found, Errors.ERROR_NOT_FOUND);
 
         Proposal storage proposal = proposals[index];
-        require(!proposal.vetoed, Errors.ERRtreasuryOR_VETOED);
+        // require(!proposal.vetoed, Errors.ERRtreasuryOR_VETOED); // @audit-issue low: no such error in library Errors
         require(!proposal.isExpired(), Errors.ERROR_EXPIRED);
         require(!proposal.isExecuted, Errors.ERROR_ALREADY_EXECUTED);
         require(proposal.isQuorumReached(), Errors.ERROR_QUORUM_IS_NOT_REACHED); // @audit-issue low: this follows from the next line -> remove this line
@@ -202,7 +202,7 @@ contract VotingDAOV2 is AccessControlled, Initializable, ProposalQueue {
         if (payment.amount > 0) { // @audit strange to create withdraw proposals with 0 amount
             require(payment.destination != address(0), Errors.ERROR_ZERO_ADDRESS);
             if (!payment.sendETH) {
-                require(payment.token != address(0), Errors.ERROR_ZERO_ADDRESS);
+                require(payment.token != address(0), Errors.ERROR_ZERO_ADDRESS); // @audit-issue medium: should be only IERC-20 compatible
             }
         }
 
