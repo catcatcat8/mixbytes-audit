@@ -7,6 +7,7 @@ import "contracts/Constants.sol";
 import "contracts/ProposalQueue.sol";
 import "contracts/Errors.sol";
 import "interfaces/IMiniMeToken.sol";
+import "hardhat/console.sol";
 
 import "./VetoNFT.sol";
 import "./AccessControlled.sol";
@@ -135,10 +136,12 @@ contract VotingDAOV2 is AccessControlled, Initializable, ProposalQueue {
 
         if (voted[msg.sender][hash] == VoteType.YEA) {
             proposal.yeas -= votingPower;
+            console.log("DELETED YEAS");
         }
 
         if (voted[msg.sender][hash] == VoteType.NAY) {
             proposal.nays -= votingPower;
+            console.log("DELETED NAYS");
         }
 
         proposal.vote(support, votingPower);
