@@ -1,13 +1,13 @@
-# VotingDAOV2 Audit Report
+# MixBytes Farm Audit Report
 
 ## Project overview
-The project consists of several smart contracts for the implementation of the DeFi DAO (Decentralized Autonomous Organization) with a use of Beacon Proxy pattern (upgradeable contracts). 
+The project consists of several smart contracts for the implementation of a DeFi DAO (Decentralized Autonomous Organization) using the Beacon Proxy pattern (upgradeable contracts). 
 
-The DAO is governed entirely by its individual members who collectively submit proposals (empty or ERC-20/ETH transfer). Each voting token holder (MiniMeToken) has the right to create proposals and vote for them. The number of votes is determined by the balance of the voting token holder at the time the proposal is created. Everyone can execute an accepted proposal.
+The DAO is governed entirely by its individual members who collectively submit proposals (empty or ERC-20/ETH transfer). Each holder of a voting token (MiniMeToken) has the right to create proposals and vote for them. The number of votes is determined by the balance of the voting token holder at the time the proposal is created. Everyone can execute an accepted proposal.
 
-In addition, the project has the ERC-721 token contract and the access control contract for delegating the right to create these tokens. ERC-721 token holders are capable to veto proposals.
+In addition, the project has an ERC-721 token contract and an access control contract for delegating the right to create these tokens. ERC-721 token holders are capable to veto proposals.
 
-The project has libraries for safe uint conversion, outputting errors and describing properties of the voting token.
+The project has libraries for safe uint conversion, errors output and the description of a voting token properties.
 
 ***
 
@@ -56,9 +56,9 @@ proposal.isExecuted = true;
 ```solidity
 destination.call{value: amount}("");
 ```
-The attacker is able to specify a non-contract address as the destination address when creating a proposal for withdrawing ETH. Howewer, the attacker is able to deploy contract with the exact address through CREATE/CREATE2 pattern. If such a proposal is accepted and the attacker's contract has a fallback payable function which calls `execute` function again, the attacker will be able to steal all ETH from the contract.
+An attacker could specify a non-contract address as the destination address when creating a proposal for withdrawing ETH. Howewer, an attacker is able to deploy contract with the exact address using CREATE/CREATE2 pattern. If such a proposal is accepted and the attacker's contract has a fallback payable function which calls `execute` function again, the attacker will be able to steal all the ETH from the contract.
 ##### Recommendation
-It's reccommended to place the `proposal.isExecuted` setting before the `if` statement. Also, if `call` is not needed in that case, it can be changed to `transfer`.
+It's recommended to place the `proposal.isExecuted` setting before the `if` statement. Also, if `call` is not needed in this case, it can be changed to `transfer`.
 
 ***
 
@@ -77,10 +77,10 @@ proposal.isExecuted = true;
 ```solidity
 token.transfer(destination, amount);
 ```
-The attacker is able to specify a poisoned token address when creating a proposal for withdrawing ERC-20. If the proposal is accepted, then the behaviour of this token during `transfer` operation may be unexpected. For example. the function can always `revert`, which can lead to a situation that this proposal will be impossible to delete from the current contract implementation, the function can call `execute` function again (reentrancy) that can lead to the theft all tokens from the contract, the function can transfer nothing which will lead to the fact that users will be deceived etc.
+An attacker is able to provide a poisoned token address when creating a proposal for withdrawing ERC-20. If the proposal is accepted, then the behaviour of this token during the `transfer` operation may be unexpected. For example. the function can always `revert`, which can lead to a situation that this proposal will be impossible to delete from the current contract implementation, the function can call the `execute` function again (reentrancy) that can lead to the theft all tokens from the contract, the function can transfer nothing which will lead to the fact that users will be deceived etc.
 
 ##### Recommendation
-It is recommended to add a list of whitelisted ERC-20 tokens that are allowed to be added to the proposal. For protection against reentrancy for withdrawing ERC-20, as in the previous case, the `proposal.isExecuted` should be set before the `if` statement.
+It is recommended to add a list of whitelisted ERC-20 tokens that are allowed to be added to the proposal. To protect against reentrancy for withdrawing ERC-20, as in the previous case, the `proposal.isExecuted` must be set before the `if` statement.
 
 ***
 
@@ -97,10 +97,10 @@ function isActive(Proposal storage proposal) internal view returns (bool) {
     return proposal.createdBlockNumber > 0 && !isRejected(proposal) && !proposal.isExecuted;
 }
 ```
-Created proposals that were only rejected or executed are removed from the proposal queue at the time a new proposal is created. Expired proposals cannot be voted for or executed. This leads to the fact that if the proposal is expired and not rejected or accepted it will never be removed from the proposal queue. With 10 such expired proposals in the proposal queue (not rejected and not executed) none of the functions of the `VotingDAOV2` contract will be able to be called (vote, veto or execute is not allowed to be called if the proposal is expired and it is not possible to create new proposals).
+Created proposals that were only rejected or executed are removed from the proposal queue at the time a new proposal is created. Expired proposals cannot be voted on or executed. This has the effect that if the proposal is expired and not rejected or accepted, it will never be removed from the proposal queue. With 10 such expired proposals in the proposal queue (not rejected and not executed) none of the functions of the `VotingDAOV2` contract can be called (vote, veto or execute cannot be called if the proposal is expired and it is not possible to create new proposals).
 
 ##### Recommendation
-It is recommended to add additional condition `!isExpired(proposal)` to the `return` statement of the `isActive` function of the `ProposalLibrary` to check if the proposal has expired. It allows to remove expired proposals from the proposal queue when a new proposal is created.
+It is recommended to add an additional condition `!isExpired(proposal)` to the `return` statement of the `isActive` function of the `ProposalLibrary` to check if the proposal has expired. It allows to remove expired proposals from the proposal queue when a new proposal is created.
 
 ***
 
@@ -112,7 +112,7 @@ Files:
 * `ProposalQueue.sol` (line 51)
 * `ProposalLibrary.sol` (line 54-56)
 
-Vetoed proposals cannott be voted for or executed. Howewer, vetoed proposals can be deleted from the proposal queue when new proposal is created only if the proposal was vetoed after it had been rejected. In other cases. vetoed proposal will be considered as active in `isActive` function of the `ProposalLibrary`. With 10 such vetoed proposals in the proposal queue (not rejected by users before vetoed) none of the functions of the `VotingDAOV2` contract will be able to be called (vote, veto or execute is not allowed to be called if the proposal is vetoed and it is not possible to create new proposals).
+Proposals that have been vetoed cannot be voted on or executed. Howewer, vetoed proposals can only be removed from the proposal queue when a new proposal is created only if the proposal was vetoed after it had been rejected. In other cases. vetoed proposal will be considered as active in `isActive` function of the `ProposalLibrary`. With 10 such vetoed proposals in the proposal queue (not rejected by users before vetoed) none of the functions of the `VotingDAOV2` contract will be able to be called (vote, veto or execute is not allowed to be called if the proposal is vetoed and it is not possible to create new proposals).
 
 ##### Recommendation
 It is recommended to add additional condition `!proposal.vetoed` to the `return` statement of the `isActive` function of the `ProposalLibrary` to check if the proposal has been vetoed. It allows to remove vetoed proposals from the proposal queue when a new proposal is created.
