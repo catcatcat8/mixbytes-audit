@@ -124,10 +124,10 @@ It is recommended to add additional condition `!proposal.vetoed` to the `return`
 #### 1. Veto manipulations
 
 ##### Description
-If the private key of some `VetoNFT` holder would be exposed or at least one NFT would fall into the wrong hands, any proposal can be vetoed by the attacker at any time. Also, even if the proposal has been accepted but not executed yet, any NFT holder can veto it.
+If the private key of any `VetoNFT` holder would be exposed or at least one NFT would fall into the wrong hands, an attacker can veto any proposal at any time (if it is not expired and executed yet). Also, even if a proposal has been accepted but not executed yet, any NFT holder can veto it.
 
 ##### Recommendation
-Consider adding multisig or voting pattern for the functionality of veto. If this option is not suitable consider transferring the NFT from holder, this limits number of times vetoed. Also there is possibility to add veto role to access control contract.
+Consider adding multisig or voting pattern for veto functionality. If this option is not suitable consider transferring the NFT from the holder when vetoing, it will limit the number veto times. Also there is a possibility to add veto role to the access control contract.
 
 Consider veto forbiddance if the `proposal.isQuorumReached()` returns true.
 
@@ -135,13 +135,13 @@ Consider veto forbiddance if the `proposal.isQuorumReached()` returns true.
 
 ### Low
 
-#### 1. It is possible to block ETH/tokens on the balance of the contract
+#### 1. It is possible to block ETH/tokens on the balance of the `VBeaconProxy` contract
 
 ##### Description
-There is `receive() external payable` function in `VotingDAOV2.sol`. But there is no functionality for a privileged person to return ETH/tokens not through creating a proposal in case of an emergency.
+There is `receive() external payable` function in the `VotingDAOV2.sol`. But there is no functionality for the privileged person to return ETH/tokens, except through creating a proposal in case of an emergency.
 
 ##### Recommendation
-It is recommended to add functionality for the possibility of withdrawing the remaining ETH/tokens from the balance of the contract for a privileged persons.
+It is recommended to add functionality for the ability to withdraw the remaining ETH/tokens from the balance of the `VBeaconProxy` contract for privileged persons.
 
 ***
 
@@ -151,7 +151,7 @@ It is recommended to add functionality for the possibility of withdrawing the re
 There are missed events for `veto`, `vote` functions in `VotingDAOV2.sol`.
 
 ##### Recommendation
-It is recommended to emit the events for these functions.
+It is recommended to emit events for these functions.
 
 ***
 
@@ -188,20 +188,20 @@ It is recommended to change the post-increments (`i++`) to the pre-increments (`
 * Contract: `VotingDAOV2.sol`
 * Lines: 72, 88
 
-It is suggested that the function names `withdrawETH` and `withdrawToken` reflect of their essence - creating a proposal for withdrawing ETH and tokens respectively. Howewer, if the parameter `amount` is set to `0`, these functions operate just like `createProposal` function, which creates an empty proposal. It is a little bit confusing and there is also a redundancy of options for creating an empty proposal.
+It is suggested that the function names `withdrawETH` and `withdrawToken` reflect of their essence - creating a proposal for withdrawing ETH and tokens respectively. Howewer, if the parameter `amount` is set to `0`, these functions operate just like `createProposal` function, which creates an empty proposal. It is a little bit confusing and there is also redundancy in the options for creating an empty proposal.
 
 ##### Recommendation
 It is recommended to add require `amount > 0` to the `withdrawETH` and `withdrawToken` functions.
 
 ***
 
-#### 6. Revoting for the same solution only spends money for gas
+#### 6. Voting for the same solution only spends money on gas
 
 ##### Description
 * Contract: `VotingDAOV2.sol`
 * Line: 124
 
-In case of re-voting for the same decision transaction will not be reverted and user will only spend money for gas payment. If this action would be disabled, then the probability that the user will not complete the transaction increases (due to MetaMask notification, HardHat local revert etc).
+In case of re-voting for the same decision, the transaction will not be reverted, and the user will spend money only on paying for gas. If this action is disabled, then the probability that user will not complete such a transaction increases (due to the MetaMask notification, HardHat local revert etc).
 
 ##### Recommendation
-It's recommended to add reverting the transaction if the user wants to vote for the same decision.
+It's recommended to add revert for the transaction if the user wants to vote for the same decision in some proposal.
