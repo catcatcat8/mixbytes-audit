@@ -6,7 +6,7 @@ import "contracts/Proposal.sol";
 import "contracts/Constants.sol";
 import "contracts/ProposalQueue.sol";
 import "contracts/Errors.sol";
-import "./IMiniMeToken.sol";
+import "interfaces/IMiniMeToken.sol";
 
 import "./VetoNFT.sol";
 import "./AccessControlled.sol";
@@ -32,8 +32,8 @@ contract VotingDAOV2 is AccessControlled, Initializable, ProposalQueue {
     IMiniMeToken public votingToken;
     VetoNFT public vetoes;
 
-    mapping(address => mapping(uint256 => VoteType)) voted;
-    mapping(uint256 => bool) proposalExisted;
+    mapping(address => mapping(uint256 => VoteType)) public voted;
+    mapping(uint256 => bool) public proposalExisted;
 
     /**
     @param token   address of MiniMeToken
@@ -74,7 +74,7 @@ contract VotingDAOV2 is AccessControlled, Initializable, ProposalQueue {
         address to,
         uint256 amount
     ) external {
-        _createProposal(hash, Payment({token: address(0), destination: to, amount: amount, sendETH: true})); // @audit-done LOW: if amount = 0 -> the same as ProposalLibrary.emptyPayment()
+        _createProposal(hash, Payment({token: address(0), destination: to, amount: amount, sendETH: true}));
     }
 
     /**
@@ -91,7 +91,7 @@ contract VotingDAOV2 is AccessControlled, Initializable, ProposalQueue {
         address to,
         uint256 amount
     ) external {
-        _createProposal(hash, Payment({token: token, destination: to, amount: amount, sendETH: false})); // @audit-done LOW: if amount = 0 -> the same as ProposalLibrary.emptyPayment()
+        _createProposal(hash, Payment({token: token, destination: to, amount: amount, sendETH: false}));
     }
 
     /**
@@ -105,12 +105,12 @@ contract VotingDAOV2 is AccessControlled, Initializable, ProposalQueue {
         (bool found, uint8 index) = find(hash);
         require(found, Errors.ERROR_NOT_FOUND);
 
-        Proposal storage proposal = proposals[index]; // @remind check gas optimisation with caching
+        Proposal storage proposal = proposals[index];
         require(!proposal.vetoed, Errors.ERROR_VETOED);
         require(!proposal.isExpired(), Errors.ERROR_EXPIRED);
-        require(!proposal.isExecuted, Errors.ERROR_ALREADY_EXECUTED); // @audit it will be logically if veto can't be used when isQuorumReached (proposal isAccepted -> veto), i think LOW
+        require(!proposal.isExecuted, Errors.ERROR_ALREADY_EXECUTED);
 
-        require(vetoes.balanceOf(msg.sender) > 0, Errors.NO_VETO_RIGHT); // @audit person with 1 nft can veto all proposals
+        require(vetoes.balanceOf(msg.sender) > 0, Errors.NO_VETO_RIGHT);
         proposal.vetoed = true;
     }
 
@@ -121,12 +121,11 @@ contract VotingDAOV2 is AccessControlled, Initializable, ProposalQueue {
     @param support  Yea or nay
     
      */
-
-    function vote(uint256 hash, bool support) external { // @audit-done low (gas optimisation): vote can be the same as previous -> nothing will happen but gas will be spent
+    function vote(uint256 hash, bool support) external {
         (bool found, uint8 index) = find(hash);
         require(found, Errors.ERROR_NOT_FOUND);
 
-        Proposal storage proposal = proposals[index]; // @remind check gas optimisation with caching
+        Proposal storage proposal = proposals[index];
         require(!proposal.vetoed, Errors.ERROR_VETOED);
         require(!proposal.isExpired(), Errors.ERROR_EXPIRED);
         require(!proposal.isExecuted, Errors.ERROR_ALREADY_EXECUTED);
@@ -143,10 +142,10 @@ contract VotingDAOV2 is AccessControlled, Initializable, ProposalQueue {
         }
 
         proposal.vote(support, votingPower);
-        voted[msg.sender][hash] = support ? VoteType.YEA : VoteType.NAY; // @remind test it
+        voted[msg.sender][hash] = support ? VoteType.YEA : VoteType.NAY;
 
         if (proposal.isQuorumReached()) {
-            emit ProposalQuorumReached(proposal.hash, proposal.isSupported()); // @audit-done can emit many times
+            emit ProposalQuorumReached(proposal.hash, proposal.isSupported());
         }
     }
 
@@ -162,14 +161,14 @@ contract VotingDAOV2 is AccessControlled, Initializable, ProposalQueue {
         require(found, Errors.ERROR_NOT_FOUND);
 
         Proposal storage proposal = proposals[index];
-        require(!proposal.vetoed, Errors.ERROR_VETOED); // @audit-done low: no such error in library Errors
+        require(!proposal.vetoed, Errors.ERROR_VETOED);
         require(!proposal.isExpired(), Errors.ERROR_EXPIRED);
         require(!proposal.isExecuted, Errors.ERROR_ALREADY_EXECUTED);
-        require(proposal.isQuorumReached(), Errors.ERROR_QUORUM_IS_NOT_REACHED); // @audit-done low: this follows from the next line -> remove this line
+        require(proposal.isQuorumReached(), Errors.ERROR_QUORUM_IS_NOT_REACHED);
         require(proposal.isAccepted(), Errors.ERROR_CANNOT_EXECUTE_REJECTED_PROPOSAL);
 
-        if (proposal.payment.amount > 0 && proposal.isAccepted()) { // @audit-done low: proposal.isAccepted() follows from the previous require -> remove this check
-            _withdraw(proposal.payment); // @audit-done CRITICAL: REENTRANCY EXECUTE()
+        if (proposal.payment.amount > 0 && proposal.isAccepted()) {
+            _withdraw(proposal.payment);
         }
 
         proposal.isExecuted = true;
@@ -199,10 +198,10 @@ contract VotingDAOV2 is AccessControlled, Initializable, ProposalQueue {
 
         require(votingToken.balanceOf(msg.sender) > 0, Errors.ERROR_INSUFFICIENT_BALANCE);
 
-        if (payment.amount > 0) { // @audit-done strange to create withdraw proposals with 0 amount
+        if (payment.amount > 0) {
             require(payment.destination != address(0), Errors.ERROR_ZERO_ADDRESS);
             if (!payment.sendETH) {
-                require(payment.token != address(0), Errors.ERROR_ZERO_ADDRESS); // @audit-done medium: should be only IERC-20 compatible
+                require(payment.token != address(0), Errors.ERROR_ZERO_ADDRESS);
             }
         }
 
@@ -233,7 +232,7 @@ contract VotingDAOV2 is AccessControlled, Initializable, ProposalQueue {
 
     function _withdrawETH(address destination, uint256 amount) internal {
         // mistype check
-        require(destination != address(0), Errors.ERROR_ZERO_ADDRESS); // @audit-done low: remove this check, this require was checked when proposal was created
+        require(destination != address(0), Errors.ERROR_ZERO_ADDRESS);
 
         // ensure there are enough funds
         // leave that requirement for testing purposes
@@ -241,7 +240,7 @@ contract VotingDAOV2 is AccessControlled, Initializable, ProposalQueue {
         require(address(this).balance >= amount, Errors.ERROR_TREASURY_INSUFFICIENT_BALANCE);
 
         // send eth
-        destination.call{value: amount}(""); // @audit-done CRITICAL: REENTRANCY
+        destination.call{value: amount}("");
     }
 
     function _withdrawToken(
@@ -250,13 +249,13 @@ contract VotingDAOV2 is AccessControlled, Initializable, ProposalQueue {
         uint256 amount
     ) internal {
         // mistype check
-        require(address(destination) != address(0), Errors.ERROR_ZERO_ADDRESS); // @audit-done low: remove this check, this require was checked when proposal was created
+        require(address(destination) != address(0), Errors.ERROR_ZERO_ADDRESS);
 
         // if there are not enough funds on the token
         // safeTransfer is still may not revert
         require(token.balanceOf(address(this)) >= amount, Errors.ERROR_TREASURY_INSUFFICIENT_BALANCE);
 
         // send token
-        token.transfer(destination, amount); // @audit-done CRITICAL: REENTRANCY IF POISONED TOKEN
+        token.transfer(destination, amount);
     }
 }

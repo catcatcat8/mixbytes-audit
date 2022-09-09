@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import 'contracts/Uint256Helpers.sol';
-import 'contracts/Constants.sol';
+import "contracts/Uint256Helpers.sol";
+import "contracts/Constants.sol";
 
 struct Payment {
     address token;
@@ -17,7 +17,7 @@ struct Proposal {
     uint32 createdBlockNumber;
     Payment payment;
     // init zeros:
-    uint32 updatedBlockNumber; // @ low: never used, only useless updating
+    uint32 updatedBlockNumber;
     uint32 yeas;
     uint32 nays;
     bool isExecuted;
@@ -52,13 +52,7 @@ library ProposalLibrary {
     }
 
     function isActive(Proposal storage proposal) internal view returns (bool) {
-        // @audit-done HIGH: add !proposal.isExpired (expired proposals will never be deleted) + !proposal.isVetoed (vetoed proposals will never be deleted)
-        return
-            proposal.createdBlockNumber > 0 &&
-            !isRejected(proposal) &&
-            !proposal.isExecuted &&
-            !isAccepted(proposal) &&
-            !proposal.vetoed;
+        return proposal.createdBlockNumber > 0 && !isRejected(proposal) && !proposal.isExecuted;
     }
 
     function vote(
