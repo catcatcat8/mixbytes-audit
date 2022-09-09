@@ -124,7 +124,7 @@ It is recommended to add additional condition `!proposal.vetoed` to the `return`
 #### 1. Veto manipulations
 
 ##### Description
-If the private key of some `VetoNFT` holders would be exposed or at least one NFT would fall into the worng hands, any proposal can be vetoed by the attacker at any time. Also, even if the proposal has been accepted but not executed yet, any NFT holder can veto it.
+If the private key of some `VetoNFT` holder would be exposed or at least one NFT would fall into the wrong hands, any proposal can be vetoed by the attacker at any time. Also, even if the proposal has been accepted but not executed yet, any NFT holder can veto it.
 
 ##### Recommendation
 Consider adding multisig or voting pattern for the functionality of veto. If this option is not suitable consider transferring the NFT from holder, this limits number of times vetoed. Also there is possibility to add veto role to access control contract.
