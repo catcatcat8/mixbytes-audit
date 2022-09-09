@@ -24,6 +24,19 @@ Low | Other non-essential issues and recommendations reported to/ acknowledged b
 
 ***
 
+## Summary of findings
+
+Severity | # of Findings
+--- | ---
+CRITICAL| 2
+HIGH    | 2
+MEDIUM  | 1
+LOW | 6
+
+During the audit process, 2 CRITICAL, 2 HIGH, 1 MEDIUM and 6 LOW severity findings were spotted and acknowledged.
+
+***
+
 ## Findings
 
 ### Critical
@@ -44,12 +57,14 @@ proposal.isExecuted = true;
 destination.call{value: amount}("");
 ```
 The attacker is able to specify a non-contract address as the destination address when creating a proposal for withdrawing ETH. Howewer, the attacker is able to deploy contract with the exact address through CREATE/CREATE2 pattern. If such a proposal is accepted and the attacker's contract has a fallback payable function which calls `execute` function again, the attacker will be able to steal all ETH from the contract.
-##### Recomendation
+##### Recommendation
 It's reccommended to place the `proposal.isExecuted` setting before the `if` statement. Also, if `call` is not needed in that case, it can be changed to `transfer`.
 
 ***
 
-#### 2. ERC-20 poisoned/not IERC-20 compatible payment token
+#### 2. ERC-20 poisoned/not ERC-20 compatible payment token
+
+##### Description
 * Contract: `VotingDAOV2.sol`
 * Lines: 170-174, 259
 ```solidity
@@ -64,7 +79,7 @@ token.transfer(destination, amount);
 ```
 The attacker is able to specify a poisoned token address when creating a proposal for withdrawing ERC-20. If the proposal is accepted, then the behaviour of this token during `transfer` operation may be unexpected. For example. the function can always `revert`, which can lead to a situation that this proposal will be impossible to delete from the current contract implementation, the function can call `execute` function again (reentrancy) that can lead to the theft all tokens from the contract, the function can transfer nothing which will lead to the fact that users will be deceived etc.
 
-##### Recomendation
+##### Recommendation
 It is recommended to add a list of whitelisted ERC-20 tokens that are allowed to be added to the proposal. For protection against reentrancy for withdrawing ERC-20, as in the previous case, the `proposal.isExecuted` should be set before the `if` statement.
 
 ***
@@ -84,7 +99,7 @@ function isActive(Proposal storage proposal) internal view returns (bool) {
 ```
 Created proposals that were only rejected or executed are removed from the proposal queue at the time a new proposal is created. Expired proposals cannot be voted for or executed. This leads to the fact that if the proposal is expired and not rejected or accepted it will never be removed from the proposal queue. With 10 such expired proposals in the proposal queue (not rejected and not executed) none of the functions of the `VotingDAOV2` contract will be able to be called (vote, veto or execute is not allowed to be called if the proposal is expired and it is not possible to create new proposals).
 
-##### Recomendation
+##### Recommendation
 It is recommended to add additional condition `!isExpired(proposal)` to the `return` statement of the `isActive` function of the `ProposalLibrary` to check if the proposal has expired. It allows to remove expired proposals from the proposal queue when a new proposal is created.
 
 ***
@@ -99,14 +114,22 @@ Files:
 
 Vetoed proposals cannott be voted for or executed. Howewer, vetoed proposals can be deleted from the proposal queue when new proposal is created only if the proposal was vetoed after it had been rejected. In other cases. vetoed proposal will be considered as active in `isActive` function of the `ProposalLibrary`. With 10 such vetoed proposals in the proposal queue (not rejected by users before vetoed) none of the functions of the `VotingDAOV2` contract will be able to be called (vote, veto or execute is not allowed to be called if the proposal is vetoed and it is not possible to create new proposals).
 
-##### Recomendation
+##### Recommendation
 It is recommended to add additional condition `!proposal.vetoed` to the `return` statement of the `isActive` function of the `ProposalLibrary` to check if the proposal has been vetoed. It allows to remove vetoed proposals from the proposal queue when a new proposal is created.
 
 ***
 
 ### Medium
 
-Not found
+#### 1. Veto manipulations
+
+##### Description
+If the private key of some `VetoNFT` holders would be exposed or at least one NFT would fall into the worng hands, any proposal can be vetoed by the attacker at any time. Also, even if the proposal has been accepted but not executed yet, any NFT holder can veto it.
+
+##### Recommendation
+Consider adding multisig or voting pattern for the functionality of veto. If this option is not suitable consider transferring the NFT from holder, this limits number of times vetoed. Also there is possibility to add veto role to access control contract.
+
+Consider veto forbiddance if the `proposal.isQuorumReached()` returns true.
 
 ***
 
@@ -117,17 +140,20 @@ Not found
 ##### Description
 There is `receive() external payable` function in `VotingDAOV2.sol`. But there is no functionality for a privileged person to return ETH/tokens not through creating a proposal in case of an emergency.
 
-##### Recomendation
-It is recommended to add functionality for the possibility of withdrawing the remaining ETH/tokens from the balance of the contract.
+##### Recommendation
+It is recommended to add functionality for the possibility of withdrawing the remaining ETH/tokens from the balance of the contract for a privileged persons.
+
+***
 
 #### 2. Missed events
 
 ##### Description
 There are missed events for `veto`, `vote` functions in `VotingDAOV2.sol`.
 
-##### Recomendation
+##### Recommendation
 It is recommended to emit the events for these functions.
 
+***
 
 #### 3. Unnecessary code
 
@@ -138,5 +164,44 @@ It is recommended to emit the events for these functions.
 * Condition `proposal.isAccepted()` in `VestingDAOV2.sol`, line 170 - always true, it follows from the require `proposal.isAccepted()`,
 * Requires `destination != address(0)` and `address(destination) != address(0)` in `VestingDAOV2.sol`, lines 235, 252 - unnecessary checks, it follows from the require `payment.destination != address(0)` in `_createProposal` function.
 
-##### Recomendation
+##### Recommendation
 It is recommended to delete unnecessary code.
+
+***
+
+#### 4. Gas optimization in increments
+
+##### Description
+* Contract: `ProposalQueue.sol`
+* Lines: 30, 39
+
+`++i` costs less gas compared to `i++` or `i += 1` for unsigned integers. In `i++`, the compiler has to create a temporary variable to store the initial value. This is not the case with `++i` in which the value is directly incremented and returned, thus, making it a cheaper alternative.
+
+##### Recommendation
+It is recommended to change the post-increments (`i++`) to the pre-increments (`++i`).
+
+***
+
+#### 5. Function names may not reflect the essence
+
+##### Description
+* Contract: `VotingDAOV2.sol`
+* Lines: 72, 88
+
+It is suggested that the function names `withdrawETH` and `withdrawToken` reflect of their essence - creating a proposal for withdrawing ETH and tokens respectively. Howewer, if the parameter `amount` is set to `0`, these functions operate just like `createProposal` function, which creates an empty proposal. It is a little bit confusing and there is also a redundancy of options for creating an empty proposal.
+
+##### Recommendation
+It is recommended to add require `amount > 0` to the `withdrawETH` and `withdrawToken` functions.
+
+***
+
+#### 6. Revoting for the same solution only spends money for gas
+
+##### Description
+* Contract: `VotingDAOV2.sol`
+* Line: 124
+
+In case of re-voting for the same decision transaction will not be reverted and user will only spend money for gas payment. If this action would be disabled, then the probability that the user will not complete the transaction increases (due to MetaMask notification, HardHat local revert etc).
+
+##### Recommendation
+It's recommended to add reverting the transaction if the user wants to vote for the same decision.

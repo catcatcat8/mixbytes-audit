@@ -15,7 +15,7 @@ contract ProposalQueue {
 
     Proposal[MAX_ACTIVE_PROPOSALS] public proposals;
 
-    function countYeas(uint256 hash) external view returns (uint32) {  // @audit-issue low: never used
+    function countYeas(uint256 hash) external view returns (uint32) {  // @audit-done low: never used
         (bool found, uint8 index) = find(hash);
 
         if (!found) return 0;
@@ -27,7 +27,7 @@ contract ProposalQueue {
     Find index of a proposal by hash that could be in any state: active, expired or finished
      */
     function find(uint256 hash) public view returns (bool, uint8) {
-        for (uint8 i; i < MAX_ACTIVE_PROPOSALS; i++) { // @audit low: gas optimisation i++ -> ++i
+        for (uint8 i; i < MAX_ACTIVE_PROPOSALS; i++) { // @audit-done gas optimisation i++ -> ++i
             if (proposals[i].hash == hash) {
                 return (true, i);
             }
@@ -36,7 +36,7 @@ contract ProposalQueue {
     }
 
     function findInactive() internal view returns (bool, uint8) {
-        for (uint8 i = 0; i < MAX_ACTIVE_PROPOSALS; i++) { // @audit low: gas optimisation i++ -> ++i
+        for (uint8 i = 0; i < MAX_ACTIVE_PROPOSALS; i++) { // @audit-done low: gas optimisation i++ -> ++i
             if (!proposals[i].isActive()) {
                 return (true, i);
             }

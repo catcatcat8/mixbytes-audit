@@ -47,7 +47,7 @@ contract VotingDAOV2 is AccessControlled, Initializable, ProposalQueue {
         require(token.decimals() == Constants.DECIMALS, "Unexpected number of decimals");
         votingToken = token;
         vetoes = vetoes_;
-        accessControl = accessControl_; // @note never used???
+        accessControl = accessControl_;
     }
 
     // allow to send ETH
@@ -74,7 +74,7 @@ contract VotingDAOV2 is AccessControlled, Initializable, ProposalQueue {
         address to,
         uint256 amount
     ) external {
-        _createProposal(hash, Payment({token: address(0), destination: to, amount: amount, sendETH: true})); // @audit-issue LOW: if amount = 0 -> the same as ProposalLibrary.emptyPayment()
+        _createProposal(hash, Payment({token: address(0), destination: to, amount: amount, sendETH: true})); // @audit-done LOW: if amount = 0 -> the same as ProposalLibrary.emptyPayment()
     }
 
     /**
@@ -91,7 +91,7 @@ contract VotingDAOV2 is AccessControlled, Initializable, ProposalQueue {
         address to,
         uint256 amount
     ) external {
-        _createProposal(hash, Payment({token: token, destination: to, amount: amount, sendETH: false})); // @audit-issue LOW: if amount = 0 -> the same as ProposalLibrary.emptyPayment()
+        _createProposal(hash, Payment({token: token, destination: to, amount: amount, sendETH: false})); // @audit-done LOW: if amount = 0 -> the same as ProposalLibrary.emptyPayment()
     }
 
     /**
@@ -122,7 +122,7 @@ contract VotingDAOV2 is AccessControlled, Initializable, ProposalQueue {
     
      */
 
-    function vote(uint256 hash, bool support) external { // @audit-issue low (gas optimisation): vote can be the same as previous -> nothing will happen but gas will be spent
+    function vote(uint256 hash, bool support) external { // @audit-done low (gas optimisation): vote can be the same as previous -> nothing will happen but gas will be spent
         (bool found, uint8 index) = find(hash);
         require(found, Errors.ERROR_NOT_FOUND);
 
@@ -146,7 +146,7 @@ contract VotingDAOV2 is AccessControlled, Initializable, ProposalQueue {
         voted[msg.sender][hash] = support ? VoteType.YEA : VoteType.NAY; // @remind test it
 
         if (proposal.isQuorumReached()) {
-            emit ProposalQuorumReached(proposal.hash, proposal.isSupported()); // @note can emit many times
+            emit ProposalQuorumReached(proposal.hash, proposal.isSupported()); // @audit-done can emit many times
         }
     }
 
@@ -162,15 +162,15 @@ contract VotingDAOV2 is AccessControlled, Initializable, ProposalQueue {
         require(found, Errors.ERROR_NOT_FOUND);
 
         Proposal storage proposal = proposals[index];
-        // require(!proposal.vetoed, Errors.ERRtreasuryOR_VETOED); // @audit-issue low: no such error in library Errors
+        require(!proposal.vetoed, Errors.ERROR_VETOED); // @audit-done low: no such error in library Errors
         require(!proposal.vetoed);
         require(!proposal.isExpired(), Errors.ERROR_EXPIRED);
         require(!proposal.isExecuted, Errors.ERROR_ALREADY_EXECUTED);
-        require(proposal.isQuorumReached(), Errors.ERROR_QUORUM_IS_NOT_REACHED); // @audit-issue low: this follows from the next line -> remove this line
+        require(proposal.isQuorumReached(), Errors.ERROR_QUORUM_IS_NOT_REACHED); // @audit-done low: this follows from the next line -> remove this line
         require(proposal.isAccepted(), Errors.ERROR_CANNOT_EXECUTE_REJECTED_PROPOSAL);
 
-        if (proposal.payment.amount > 0 && proposal.isAccepted()) { // @audit-issue low: proposal.isAccepted() follows from the previous require -> remove this check
-            _withdraw(proposal.payment); // @audit-issue CRITICAL: REENTRANCY EXECUTE()
+        if (proposal.payment.amount > 0 && proposal.isAccepted()) { // @audit-done low: proposal.isAccepted() follows from the previous require -> remove this check
+            _withdraw(proposal.payment); // @audit-done CRITICAL: REENTRANCY EXECUTE()
         }
 
         proposal.isExecuted = true;
@@ -200,10 +200,10 @@ contract VotingDAOV2 is AccessControlled, Initializable, ProposalQueue {
 
         require(votingToken.balanceOf(msg.sender) > 0, Errors.ERROR_INSUFFICIENT_BALANCE);
 
-        if (payment.amount > 0) { // @audit strange to create withdraw proposals with 0 amount
+        if (payment.amount > 0) { // @audit-done strange to create withdraw proposals with 0 amount
             require(payment.destination != address(0), Errors.ERROR_ZERO_ADDRESS);
             if (!payment.sendETH) {
-                require(payment.token != address(0), Errors.ERROR_ZERO_ADDRESS); // @audit-issue medium: should be only IERC-20 compatible
+                require(payment.token != address(0), Errors.ERROR_ZERO_ADDRESS); // @audit-done medium: should be only IERC-20 compatible
             }
         }
 
@@ -234,7 +234,7 @@ contract VotingDAOV2 is AccessControlled, Initializable, ProposalQueue {
 
     function _withdrawETH(address destination, uint256 amount) internal {
         // mistype check
-        require(destination != address(0), Errors.ERROR_ZERO_ADDRESS); // @audit-issue low: remove this check, this require was checked when proposal was created
+        require(destination != address(0), Errors.ERROR_ZERO_ADDRESS); // @audit-done low: remove this check, this require was checked when proposal was created
 
         // ensure there are enough funds
         // leave that requirement for testing purposes
@@ -242,7 +242,7 @@ contract VotingDAOV2 is AccessControlled, Initializable, ProposalQueue {
         require(address(this).balance >= amount, Errors.ERROR_TREASURY_INSUFFICIENT_BALANCE);
 
         // send eth
-        destination.call{value: amount}(""); // @audit-issue CRITICAL: REENTRANCY
+        destination.call{value: amount}(""); // @audit-done CRITICAL: REENTRANCY
     }
 
     function _withdrawToken(
@@ -251,13 +251,13 @@ contract VotingDAOV2 is AccessControlled, Initializable, ProposalQueue {
         uint256 amount
     ) internal {
         // mistype check
-        require(address(destination) != address(0), Errors.ERROR_ZERO_ADDRESS); // @audit-issue low: remove this check, this require was checked when proposal was created
+        require(address(destination) != address(0), Errors.ERROR_ZERO_ADDRESS); // @audit-done low: remove this check, this require was checked when proposal was created
 
         // if there are not enough funds on the token
         // safeTransfer is still may not revert
         require(token.balanceOf(address(this)) >= amount, Errors.ERROR_TREASURY_INSUFFICIENT_BALANCE);
 
         // send token
-        token.transfer(destination, amount); // @audit-issue CRITICAL: REENTRANCY IF POISONED TOKEN
+        token.transfer(destination, amount); // @audit-done CRITICAL: REENTRANCY IF POISONED TOKEN
     }
 }
