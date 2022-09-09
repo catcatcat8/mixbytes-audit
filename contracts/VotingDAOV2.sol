@@ -163,7 +163,6 @@ contract VotingDAOV2 is AccessControlled, Initializable, ProposalQueue {
 
         Proposal storage proposal = proposals[index];
         require(!proposal.vetoed, Errors.ERROR_VETOED); // @audit-done low: no such error in library Errors
-        require(!proposal.vetoed);
         require(!proposal.isExpired(), Errors.ERROR_EXPIRED);
         require(!proposal.isExecuted, Errors.ERROR_ALREADY_EXECUTED);
         require(proposal.isQuorumReached(), Errors.ERROR_QUORUM_IS_NOT_REACHED); // @audit-done low: this follows from the next line -> remove this line
