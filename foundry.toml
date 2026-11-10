@@ -1,0 +1,21 @@
+[profile.default]
+src = "contracts"
+test = "test"
+out = "out"
+libs = ["lib"]
+solc_version = "0.8.17"
+remappings = [
+    "forge-std/=lib/forge-std/src/",
+    "@openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/",
+    "@openzeppelin/contracts-upgradeable/=lib/openzeppelin-contracts-upgradeable/contracts/",
+    # The audited code imports the MiniMe interface from an `interfaces/` folder.
+    "interfaces/=contracts/",
+]
+
+[fmt]
+line_length = 120
+# The audited contracts are kept exactly as they were reviewed.
+ignore = ["contracts/**/*.sol"]
+
+[lint]
+lint_on_build = false
