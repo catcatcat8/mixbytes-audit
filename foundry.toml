@@ -11,6 +11,8 @@ remappings = [
     # The audited code imports the MiniMe interface from an `interfaces/` folder.
     "interfaces/=contracts/",
 ]
+# The audited code is compiled as-is; its compiler warnings are part of the findings.
+ignored_warnings_from = ["contracts"]
 
 [fmt]
 line_length = 120
